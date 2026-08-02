@@ -1,0 +1,94 @@
+{
+    "elements": [
+        {
+            "type": "Label",
+            "caption": "Quellvariablen"
+        },
+        {
+            "type": "SelectVariable",
+            "name": "NetzsaldoVariable",
+            "caption": "Netzeinspeisung/-bezug (Watt, z.B. Shelly)"
+        },
+        {
+            "type": "CheckBox",
+            "name": "EinspeisungIstPositiv",
+            "caption": "Positiver Wert = Einspeisung (sonst: negativer Wert = Einspeisung)"
+        },
+        {
+            "type": "SelectVariable",
+            "name": "LadeleistungVariable",
+            "caption": "Aktuelle Ladeleistung der Wallbox (Watt)"
+        },
+        {
+            "type": "SelectVariable",
+            "name": "LadestatusVariable",
+            "caption": "Ladestatus/Fahrzeug lädt (Boolean, optional - nur informativ)"
+        },
+        {
+            "type": "SelectVariable",
+            "name": "LadestromSollVariable",
+            "caption": "Ladestrom-Vorgabe der Wallbox (schreibbare Zielvariable mit Aktion)"
+        },
+        {
+            "type": "Label",
+            "caption": "Wallbox-Parameter"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "Phasen",
+            "caption": "Phasen",
+            "minimum": 1,
+            "maximum": 3
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "Spannung",
+            "caption": "Spannung (V)",
+            "minimum": 100,
+            "maximum": 250
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "MinAmpere",
+            "caption": "Minimaler Ladestrom (A)",
+            "minimum": 1,
+            "maximum": 32
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "MaxAmpere",
+            "caption": "Maximaler Ladestrom (A)",
+            "minimum": 1,
+            "maximum": 32
+        },
+        {
+            "type": "Label",
+            "caption": "Regelverhalten"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "HalteVerzoegerungS",
+            "caption": "Hysterese im Modus \"Minimal mit Überschuss\" (Sekunden)",
+            "minimum": 0,
+            "maximum": 600
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "ZyklusSekunden",
+            "caption": "Regelzyklus (Sekunden)",
+            "minimum": 5,
+            "maximum": 300
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Regelzyklus jetzt ausführen",
+            "onClick": "PVUL_Regelzyklus($id);"
+        }
+    ],
+    "status": [
+        { "code": 102, "icon": "active", "caption": "Aktiv" },
+        { "code": 201, "icon": "inactive", "caption": "Quellvariablen nicht konfiguriert" }
+    ]
+}

@@ -1,0 +1,15 @@
+{
+    "id": "{4867F4E9-D969-439F-A050-0E1C00BCD7CA}",
+    "name": "PVUeberschussladen",
+    "type": 3,
+    "vendor": "",
+    "aliases": [
+        "PV Überschussladen",
+        "Wallbox Überschussladen"
+    ],
+    "url": "",
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "PVUL"
+}
