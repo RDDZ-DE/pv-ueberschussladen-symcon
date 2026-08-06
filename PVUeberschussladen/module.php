@@ -37,13 +37,22 @@ class PVUeberschussladen extends IPSModule
 
         $this->SicherstelleProfile();
 
-        $this->MaintainVariable('Ueberschuss', 'Aktueller Überschuss', 1, 'PVUL.Watt', 10, true);
-        $this->MaintainVariable('Modus', 'Modus', 1, 'PVUL.Modus', 20, true);
-        $this->MaintainVariable('LadestromIst', 'Aktuell gesetzter Ladestrom', 1, 'PVUL.Ampere', 30, true);
-        $this->MaintainVariable('Ladestufe', 'Status (0=Aus,1=Teilladung,2=Volladung)', 1, '', 40, true);
-        $this->MaintainVariable('Ladestart', 'Ladestart', 3, '', 50, true);
-        $this->MaintainVariable('SessionKwh', 'Geladene Energie (Session)', 2, '~Electricity', 60, true);
-        $this->MaintainVariable('LetzterLauf', 'Letzte Berechnung', 3, '', 70, true);
+        $variablen = [
+            ['Ueberschuss',        'Aktueller Überschuss',                      1, 'PVUL.Watt'],
+            ['Modus',              'Modus',                                     1, 'PVUL.Modus'],
+            ['LadestromIst',       'Aktuell gesetzter Ladestrom',                1, 'PVUL.Ampere'],
+            ['Ladestufe',          'Status (0=Aus,1=Teilladung,2=Volladung)',    1, ''],
+            ['Ladestart',          'Ladestart',                                 3, ''],
+            ['SessionKwh',         'Geladene Energie (Session)',                2, '~Electricity'],
+            ['SessionKwhSolar',    'Davon aus PV (Session)',                    2, '~Electricity'],
+            ['SessionSolarAnteil', 'PV-Anteil (Session)',                       1, 'PVUL.Prozent'],
+            ['LetzterLauf',        'Letzte Berechnung',                         3, '']
+        ];
+        $positionen = [10, 20, 30, 40, 50, 60, 65, 68, 70];
+        foreach ($variablen as $i => [$ident, $name, $typ, $profil]) {
+            $this->MaintainVariable($ident, $name, $typ, $profil, $positionen[$i], true);
+            $this->AktualisiereNameUndProfil($ident, $name, $profil);
+        }
         $this->EnableAction('Modus');
 
         $netzOk = $this->ReadPropertyInteger('NetzsaldoVariable') > 0;
@@ -70,11 +79,28 @@ class PVUeberschussladen extends IPSModule
         IPS_SetVariableProfileAssociation($modusProfil, 2, 'Minimal mit Überschuss', '', -1);
         IPS_SetVariableProfileAssociation($modusProfil, 3, 'Maximal (fest)', '', -1);
 
-        foreach ([['PVUL.Watt', 1, ' W'], ['PVUL.Ampere', 1, ' A']] as [$name, $typ, $suffix]) {
+        foreach ([['PVUL.Watt', 1, ' W'], ['PVUL.Ampere', 1, ' A'], ['PVUL.Prozent', 1, ' %']] as [$name, $typ, $suffix]) {
             if (!IPS_VariableProfileExists($name)) {
                 IPS_CreateVariableProfile($name, $typ);
             }
             IPS_SetVariableProfileText($name, '', $suffix);
+        }
+    }
+
+    /**
+     * MaintainVariable() setzt Name/Profil offenbar nur beim erstmaligen Anlegen einer Variable,
+     * nicht bei jedem erneuten ApplyChanges für eine bereits bestehende Variable. Deshalb hier
+     * zusätzlich explizit erzwungen, bei jedem Speichern.
+     */
+    private function AktualisiereNameUndProfil(string $ident, string $name, string $profil): void
+    {
+        $vid = @$this->GetIDForIdent($ident);
+        if ($vid === false || $vid === 0) {
+            return;
+        }
+        IPS_SetName($vid, $name);
+        if ($profil !== '') {
+            IPS_SetVariableCustomProfile($vid, $profil);
         }
     }
 
@@ -123,12 +149,22 @@ class PVUeberschussladen extends IPSModule
 
         $jetzt = time();
 
-        // kWh-Tracking der Ladesession (Integration der Ist-Ladeleistung über die Zeit)
+        // kWh-Tracking der Ladesession (Integration der Ist-Ladeleistung über die Zeit),
+        // zusätzlich getrennt nach PV-gedecktem Anteil für die Prozent-Berechnung
         $letzterLaufTS = $this->ReadAttributeInteger('LetzterLaufTS');
         if ($letzterLaufTS > 0 && $ladeleistungIst > 0) {
             $deltaSekunden = $jetzt - $letzterLaufTS;
             $deltaKwh = ($ladeleistungIst * $deltaSekunden) / 3600000; // W * s -> kWh
             $this->SetValue('SessionKwh', $this->GetValue('SessionKwh') + $deltaKwh);
+
+            // PV-gedeckter Teil der aktuellen Ladeleistung: min(Überschuss, Ladeleistung), nie negativ
+            $pvAnteilWatt = max(0, min($ueberschuss, $ladeleistungIst));
+            $deltaKwhSolar = ($pvAnteilWatt * $deltaSekunden) / 3600000;
+            $this->SetValue('SessionKwhSolar', $this->GetValue('SessionKwhSolar') + $deltaKwhSolar);
+
+            $sessionKwh = $this->GetValue('SessionKwh');
+            $anteilProzent = $sessionKwh > 0 ? (int) round(($this->GetValue('SessionKwhSolar') / $sessionKwh) * 100) : 0;
+            $this->SetValue('SessionSolarAnteil', $anteilProzent);
         }
         $this->WriteAttributeInteger('LetzterLaufTS', $jetzt);
         $this->SetValue('LetzterLauf', date('Y-m-d H:i:s'));
@@ -181,12 +217,18 @@ class PVUeberschussladen extends IPSModule
         if ($berechneterAmpere != $aktuellerAmpere && $zielIstStabil) {
             RequestAction($vidLadestromSoll, $berechneterAmpere);
             $this->SetValue('LadestromIst', $berechneterAmpere);
-            $this->SetValue('Ladestufe', $modus == 0 ? 0 : ($berechneterAmpere >= $maxAmpere ? 2 : 1));
 
             if ($aktuellerAmpere == 0 && $berechneterAmpere > 0) {
                 $this->SetValue('Ladestart', date('Y-m-d H:i:s'));
                 $this->SetValue('SessionKwh', 0.0);
+                $this->SetValue('SessionKwhSolar', 0.0);
+                $this->SetValue('SessionSolarAnteil', 0);
             }
         }
+
+        // Status unabhängig von der Hysterese bei JEDEM Zyklus aktualisieren, sonst bleibt er
+        // z.B. nach einem Moduswechsel auf "Aus" hängen, falls sich der gesendete Ladestrom
+        // dabei zufällig nicht ändert (z.B. weil vorher schon MinAmpere aktiv war).
+        $this->SetValue('Ladestufe', $modus == 0 ? 0 : ($berechneterAmpere >= $maxAmpere ? 2 : 1));
     }
 }
