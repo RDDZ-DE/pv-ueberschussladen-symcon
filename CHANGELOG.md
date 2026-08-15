@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.2] - 2026-08-06
+
+### Behoben
+- Status blieb nach Ladeende (Auto voll oder abgesteckt) fälschlich auf
+  "lädt" hängen, obwohl real 0 W flossen - das Modul fordert unabhängig
+  davon weiter Strom an, solange der Modus nicht manuell auf "Aus" steht.
+  Betraf u.a. die Fronius-Drosselung, die dadurch dauerhaft deaktiviert
+  blieb. Status wird jetzt (falls eine Ladeleistungs-Variable konfiguriert
+  ist) aus der tatsächlich gemessenen Ladeleistung abgeleitet, nicht mehr
+  nur aus dem gewünschten Modus.
+
 ## [1.1.1] - 2026-08-06
 
 ### Behoben
@@ -7,9 +18,8 @@
   hängen, falls sich der tatsächlich gesendete Ladestrom dabei zufällig
   nicht änderte (z.B. weil vorher schon der Minimalstrom aktiv war) - der
   Status wurde nur innerhalb des Hysterese-Blocks aktualisiert, der in
-  diesem Fall übersprungen wurde. Betraf u.a. die Fronius-Drosselung, die
-  sich dadurch nach Ladeende nicht wieder aktivierte. Status wird jetzt bei
-  jedem Zyklus unabhängig davon aus dem aktuellen Modus berechnet.
+  diesem Fall übersprungen wurde. Status wird jetzt bei jedem Zyklus
+  unabhängig davon aus dem aktuellen Modus berechnet.
 
 ## [1.1.0] - 2026-08-05
 
@@ -18,6 +28,14 @@
   berechnen pro Regelzyklus den PV-gedeckten Anteil der Ladeleistung
   (`min(Überschuss, Ladeleistung)`) und summieren ihn über die Session auf,
   um den Prozentsatz der rein aus Solarstrom geladenen Energie zu ermitteln.
+
+## [1.0.1] - 2026-08-01
+
+### Behoben
+- Name und Profil einer Variable wurden nach dem ersten Anlegen nicht mehr
+  aktualisiert, selbst nach erneutem Speichern. `MaintainVariable()`
+  aktualisiert Name/Profil offenbar nur beim erstmaligen Anlegen - jetzt
+  zusätzlich bei jedem Speichern explizit erzwungen.
 
 ## [1.0.0] - 2026-08-01
 

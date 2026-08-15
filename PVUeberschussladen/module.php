@@ -137,7 +137,8 @@ class PVUeberschussladen extends IPSModule
         $halteVerzoegerungS  = $this->ReadPropertyInteger('HalteVerzoegerungS');
 
         $netzRoh         = GetValue($vidNetz);
-        $ladeleistungIst = ($vidLadeleistung > 0 && @IPS_VariableExists($vidLadeleistung)) ? GetValue($vidLadeleistung) : 0;
+        $ladeleistungKonfiguriert = ($vidLadeleistung > 0 && @IPS_VariableExists($vidLadeleistung));
+        $ladeleistungIst = $ladeleistungKonfiguriert ? GetValue($vidLadeleistung) : 0;
 
         // Einspeisung (positiv = Strom fließt Richtung Netz, "Überschuss")
         $einspeisung = $this->ReadPropertyBoolean('EinspeisungIstPositiv') ? $netzRoh : -$netzRoh;
@@ -226,9 +227,20 @@ class PVUeberschussladen extends IPSModule
             }
         }
 
-        // Status unabhängig von der Hysterese bei JEDEM Zyklus aktualisieren, sonst bleibt er
-        // z.B. nach einem Moduswechsel auf "Aus" hängen, falls sich der gesendete Ladestrom
-        // dabei zufällig nicht ändert (z.B. weil vorher schon MinAmpere aktiv war).
-        $this->SetValue('Ladestufe', $modus == 0 ? 0 : ($berechneterAmpere >= $maxAmpere ? 2 : 1));
+        // Status: NICHT nur aus dem gewünschten Modus ableiten, sondern aus der tatsächlich
+        // gemessenen Ladeleistung - sonst bleibt "lädt" stehen, obwohl das Auto voll ist oder
+        // abgesteckt wurde (das Modul fordert ja unabhängig davon weiter Strom an, solange der
+        // Modus nicht manuell auf "Aus" gestellt wird). Schwelle 100W, um Messrauschen bei "0"
+        // nicht als "lädt" zu werten.
+        if ($modus == 0) {
+            $status = 0;
+        } elseif ($ladeleistungKonfiguriert) {
+            $status = ($ladeleistungIst >= 100) ? ($berechneterAmpere >= $maxAmpere ? 2 : 1) : 0;
+        } else {
+            // Ohne konfigurierte Ladeleistungs-Variable können wir es nicht besser wissen als
+            // "was wir angefordert haben"
+            $status = $berechneterAmpere >= $maxAmpere ? 2 : 1;
+        }
+        $this->SetValue('Ladestufe', $status);
     }
 }
