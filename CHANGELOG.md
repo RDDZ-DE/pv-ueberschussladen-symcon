@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.0] - 2026-08-11
+
+### Hinzugefügt
+- Neue Option "Echtes Aus erlauben (0A senden)" (Standard: aus). Bisher
+  sendete der Modus "Aus" immer den Minimalstrom statt 0, weil viele
+  Wallboxen eine 0-Vorgabe als Fehler werten. Wer eine Zielsteuerung nutzt,
+  die 0 selbst sicher abfängt (z.B. die eigene Heidelberg-to-MQTT-Firmware,
+  die 0 intern in ein Remote-Lock statt eine direkte Registerschreibung
+  übersetzt), kann jetzt bewusst ein echtes Aus aktivieren.
+
 ## [1.1.2] - 2026-08-06
 
 ### Behoben

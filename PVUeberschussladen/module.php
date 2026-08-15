@@ -23,6 +23,10 @@ class PVUeberschussladen extends IPSModule
         $this->RegisterPropertyInteger('HalteVerzoegerungS', 60);
         $this->RegisterPropertyInteger('ZyklusSekunden', 20);
 
+        // Standardmäßig sicher (nie 0A) - nur aktivieren, wenn die Zielsteuerung eine 0 selbst
+        // sicher abfängt (z.B. eigene Firmware mit Remote-Lock statt direkter Registerschreibung)
+        $this->RegisterPropertyBoolean('AusDarfNull', false);
+
         // Interner Zustand (keine sichtbaren Variablen, um die Instanz übersichtlich zu halten)
         $this->RegisterAttributeInteger('StufeSeitTS', 0);
         $this->RegisterAttributeInteger('NeuerAmpereIntern', -1);
@@ -175,8 +179,8 @@ class PVUeberschussladen extends IPSModule
         $sofortWirksam = true;
 
         switch ($modus) {
-            case 0: // Aus - siehe Sicherheitsnetz unten, warum trotzdem MinAmpere gesendet wird
-                $berechneterAmpere = $minAmpere;
+            case 0: // Aus - sendet 0A nur, wenn AusDarfNull aktiviert ist (siehe Sicherheitsnetz unten)
+                $berechneterAmpere = $this->ReadPropertyBoolean('AusDarfNull') ? 0 : $minAmpere;
                 break;
             case 1: // Minimal, fest
                 $berechneterAmpere = $minAmpere;
@@ -192,10 +196,13 @@ class PVUeberschussladen extends IPSModule
                 break;
         }
 
-        // Sicherheitsnetz: unabhängig vom Modus NIE unter das Minimum (insbesondere nie 0) an die
-        // Wallbox senden - viele Wallboxen (u.a. Heidelberg Energy Control) werten eine
-        // Stromvorgabe von 0 als Kommunikationsfehler, nicht als "Aus".
-        if ($berechneterAmpere < $minAmpere) {
+        // Sicherheitsnetz: unabhängig vom Modus NIE unter das Minimum an die Wallbox senden -
+        // viele Wallboxen (u.a. Heidelberg Energy Control) werten eine Stromvorgabe von 0 als
+        // Kommunikationsfehler, nicht als "Aus". Ausnahme: bewusst gewähltes "echtes Aus" im
+        // Modus "Aus" mit aktivierter AusDarfNull-Option (die Zielsteuerung übersetzt die 0 dann
+        // selbst sicher, z.B. in ein Remote-Lock statt einer direkten Registerschreibung).
+        $bewusstesEchtesAus = ($modus == 0 && $this->ReadPropertyBoolean('AusDarfNull'));
+        if ($berechneterAmpere < $minAmpere && !$bewusstesEchtesAus) {
             $berechneterAmpere = $minAmpere;
         }
 

@@ -62,6 +62,11 @@
             "maximum": 32
         },
         {
+            "type": "CheckBox",
+            "name": "AusDarfNull",
+            "caption": "Echtes Aus erlauben (0A senden) - NUR aktivieren, wenn die Zielsteuerung 0 sicher verarbeitet (z.B. eigene Firmware mit Remote-Lock statt direkter Registerschreibung, wie Heidelberg-to-MQTT)"
+        },
+        {
             "type": "Label",
             "caption": "Regelverhalten"
         },
