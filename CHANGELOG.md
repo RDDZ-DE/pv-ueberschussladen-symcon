@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.1] - 2026-08-14
+
+### Behoben
+- "Geladene Energie (Session)" und "PV-Anteil (Session)" resetteten sich
+  praktisch nie: die Erkennung einer neuen Ladesession beruhte auf dem
+  Wechsel des von uns GESENDETEN Ladestroms von 0 auf >0 - durch das
+  Sicherheitsnetz (nie 0 senden) trat dieser Fall aber fast nie ein, wodurch
+  "Session" faktisch zu einem tagelangen Dauerzähler wurde statt sich pro
+  Ladevorgang zurückzusetzen. Die Erkennung basiert jetzt (sofern eine
+  Ladeleistung-Variable konfiguriert ist) auf der tatsächlich GEMESSENEN
+  Ladeleistung statt auf dem selbst gesendeten Wert.
+
 ## [1.2.0] - 2026-08-11
 
 ### Hinzugefügt

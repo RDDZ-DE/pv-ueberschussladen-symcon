@@ -1,9 +1,9 @@
 {
     "id": "{B58B83B6-BD8B-49DE-9984-A721C2758E7E}",
     "name": "PVUeberschussladen",
-    "version": "1.2.0",
-    "build": 5,
-    "date": 1786441926,
+    "version": "1.2.1",
+    "build": 6,
+    "date": 1786740229,
     "author": "Dennis",
     "url": "https://github.com/RDDZ-DE/pv-ueberschussladen-symcon",
     "compatibility": {

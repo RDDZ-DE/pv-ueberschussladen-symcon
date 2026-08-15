@@ -31,6 +31,7 @@ class PVUeberschussladen extends IPSModule
         $this->RegisterAttributeInteger('StufeSeitTS', 0);
         $this->RegisterAttributeInteger('NeuerAmpereIntern', -1);
         $this->RegisterAttributeInteger('LetzterLaufTS', 0);
+        $this->RegisterAttributeBoolean('WarAmLaden', false);
 
         $this->RegisterTimer('Regelzyklus', 0, 'PVUL_Regelzyklus($_IPS[\'TARGET\']);');
     }
@@ -154,6 +155,19 @@ class PVUeberschussladen extends IPSModule
 
         $jetzt = time();
 
+        // Neue Ladesession erkennen: anhand der TATSÄCHLICH gemessenen Ladeleistung (nicht anhand
+        // des von uns gesendeten Ladestroms - der war durch das Sicherheitsnetz früher nie 0,
+        // wodurch eine neue Session nie erkannt wurde und "Session" faktisch zum Dauerzähler wurde).
+        $ladtGeradeWirklich = $ladeleistungKonfiguriert && ($ladeleistungIst >= 100);
+        $warAmLadenLetztesMal = $this->ReadAttributeBoolean('WarAmLaden');
+        if ($ladtGeradeWirklich && !$warAmLadenLetztesMal) {
+            $this->SetValue('Ladestart', date('Y-m-d H:i:s'));
+            $this->SetValue('SessionKwh', 0.0);
+            $this->SetValue('SessionKwhSolar', 0.0);
+            $this->SetValue('SessionSolarAnteil', 0);
+        }
+        $this->WriteAttributeBoolean('WarAmLaden', $ladtGeradeWirklich);
+
         // kWh-Tracking der Ladesession (Integration der Ist-Ladeleistung über die Zeit),
         // zusätzlich getrennt nach PV-gedecktem Anteil für die Prozent-Berechnung
         $letzterLaufTS = $this->ReadAttributeInteger('LetzterLaufTS');
@@ -226,7 +240,9 @@ class PVUeberschussladen extends IPSModule
             RequestAction($vidLadestromSoll, $berechneterAmpere);
             $this->SetValue('LadestromIst', $berechneterAmpere);
 
-            if ($aktuellerAmpere == 0 && $berechneterAmpere > 0) {
+            // Fallback nur, wenn keine Ladeleistung-Variable konfiguriert ist - sonst übernimmt
+            // die präzisere Erkennung weiter oben (anhand echter Ladeleistung) den Session-Reset.
+            if (!$ladeleistungKonfiguriert && $aktuellerAmpere == 0 && $berechneterAmpere > 0) {
                 $this->SetValue('Ladestart', date('Y-m-d H:i:s'));
                 $this->SetValue('SessionKwh', 0.0);
                 $this->SetValue('SessionKwhSolar', 0.0);
